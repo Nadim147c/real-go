@@ -1,0 +1,269 @@
+// Package datasize provides utilities for representing, formatting, and
+// printing data sizes in metric and binary units, for both bytes and bits.
+//
+// It supports automatic unit selection, custom precision, and integration with
+// the fmt package via custom formatting verbs.
+package datasize
+
+import (
+	"fmt"
+	"math"
+	"math/big"
+	"slices"
+)
+
+// FormatUnit describes a family of units used for formatting data sizes.
+type FormatUnit int
+
+const (
+	// FormatBinaryByte represents binary byte units (KiB, MiB, GiB, ...).
+	FormatBinaryByte FormatUnit = iota
+	// FormatMetricByte represents metric byte units (kB, MB, GB, ...).
+	FormatMetricByte
+	// FormatBinaryBit represents binary bit units (Kib, Mib, Gib, ...).
+	FormatBinaryBit
+	// FormatMetricBit represents metric bit units (Kb, Mb, Gb, ...).
+	FormatMetricBit
+)
+
+// Size represents a quantity of data in bytes.
+//
+// It is defined as an int64 and can represent both byte- and bit-based
+// quantities through conversion.
+type Size int64
+
+// revive:disable exported
+
+const (
+	// Zero represents a data size of zero bytes.
+	Zero Size = 0
+
+	// Byte represents a single byte.
+	Byte Size = 1
+
+	// Metric byte units.
+	KB Size = 1000 * Byte
+	MB Size = 1000 * KB
+	GB Size = 1000 * MB
+	TB Size = 1000 * GB
+	PB Size = 1000 * TB
+	EB Size = 1000 * PB
+
+	// Binary byte units.
+	KiB Size = 1024 * Byte
+	MiB Size = 1024 * KiB
+	GiB Size = 1024 * MiB
+	TiB Size = 1024 * GiB
+	PiB Size = 1024 * TiB
+	EiB Size = 1024 * PiB
+
+	// Metric bit units.
+	Kb Size = KB / 8
+	Mb Size = MB / 8
+	Gb Size = GB / 8
+	Tb Size = TB / 8
+	Pb Size = PB / 8
+	Eb Size = EB / 8
+
+	// Binary bit units.
+	Kib Size = KiB / 8
+	Mib Size = MiB / 8
+	Gib Size = GiB / 8
+	Tib Size = TiB / 8
+	Pib Size = PiB / 8
+)
+
+// revive:export exported
+
+// quotient returns d divided by u as a floating-point value. If u is zero,
+// return NaN.
+func (d Size) quotient(u Size) float64 {
+	if u == 0 {
+		return math.NaN()
+	}
+	abs := d / u
+	mod := d % u
+	return float64(abs) + float64(mod)/float64(u)
+}
+
+// UnitTable maps supported unit strings to their corresponding Size values.
+var UnitTable = map[string]Size{
+	"kB": KB, "KB": KB, "MB": MB, "GB": GB, "TB": TB, "PB": PB, "EB": EB,
+	"kiB": KiB, "KiB": KiB, "MiB": MiB, "GiB": GiB, "TiB": TiB, "PiB": PiB, "EiB": EiB,
+	"kb": Kb, "Kb": Kb, "Mb": Mb, "Gb": Gb, "Tb": Tb, "Pb": Pb, "Eb": Eb,
+	"kib": Kib, "Kib": Kib, "Mib": Mib, "Gib": Gib, "Tib": Tib, "Pib": Pib,
+}
+
+// FormatUnitString formats the Size using the specified unit and precision.
+//
+// Supported units include:
+//   - b, B
+//   - kB, KB, MB, GB, TB, PB, EB
+//   - kiB, KiB, MiB, GiB, TiB, PiB, EiB
+//   - kb, Kb, Mb, Gb, Tb, Pb, Eb
+//   - kib, Kib, Mib, Gib, Tib, Pib, Eib
+//
+// A precision of zero prints an integer value. For bits and bytes, precision
+// greater than zero appends a fractional part of zeros.
+func (d Size) FormatUnitString(precision int, unit string) string {
+	if d == 0 {
+		return "0 " + unit
+	}
+
+	// Handle bytes.
+	if unit == "B" {
+		if precision == 0 {
+			return fmt.Sprintf("%d %s", int64(d), unit)
+		}
+		return fmt.Sprintf("%d.%0*d %s", int64(d), precision, 0, unit)
+	}
+
+	// Handle bits.
+	if unit == "b" {
+		bits := big.NewInt(int64(d))
+		bits.Mul(bits, big.NewInt(8))
+
+		if precision == 0 {
+			return fmt.Sprintf("%s %s", bits, unit)
+		}
+		return fmt.Sprintf("%s.%0*d %s", bits, precision, 0, unit)
+	}
+
+	u, ok := UnitTable[unit]
+	if !ok {
+		panic("illegal diskspace unit")
+	}
+
+	format := fmt.Sprintf("%%.%df %s", precision, unit)
+	return fmt.Sprintf(format, d.quotient(u))
+}
+
+// Format implements fmt.Formatter. Supported verbs:
+//   - %B for binary byte units (KiB, MiB, ...)
+//   - %b for binary bit units (Kib, Mib, ...)
+//   - %M for metric byte units (KB, MB, ...)
+//   - %m for metric bit units (Kb, Mb, ...)
+//   - %d for the raw int64 value
+//   - %s for a string representation similar to %B but ignoring precision
+func (d Size) Format(f fmt.State, verb rune) {
+	precision, fixed := f.Precision()
+	var unit string
+
+	switch verb {
+	case 'B':
+		unit = d.bestUnit(FormatBinaryByte)
+	case 'b':
+		unit = d.bestUnit(FormatBinaryBit)
+	case 'M':
+		unit = d.bestUnit(FormatMetricByte)
+	case 'm':
+		unit = d.bestUnit(FormatMetricBit)
+	case 'd':
+		fmt.Fprint(f, int64(d))
+		return
+	default:
+		fmt.Fprint(f, d.String())
+		return
+	}
+
+	if fixed {
+		fmt.Fprint(f, d.FormatUnitString(precision, unit))
+		return
+	}
+
+	if unit == "B" || unit == "b" {
+		fmt.Fprint(f, d.FormatUnitString(0, unit))
+		return
+	}
+
+	fmt.Fprint(f, d.FormatUnitString(2, unit))
+}
+
+// String returns the default string representation of the Size.
+//
+// It uses binary byte units and prints with two decimal places, except for raw
+// bytes, which are printed as integers.
+func (d Size) String() string {
+	unit := d.bestUnit(FormatBinaryByte)
+	switch unit {
+	case "b", "B":
+		return d.FormatUnitString(0, unit)
+	default:
+		return d.FormatUnitString(2, unit)
+	}
+}
+
+type pair struct {
+	name  string
+	value Size
+}
+
+var (
+	metricBytes = []pair{
+		{"kB", KB},
+		{"MB", MB},
+		{"GB", GB},
+		{"TB", TB},
+		{"PB", PB},
+		{"EB", EB},
+	}
+	metricBits = []pair{
+		{"kb", Kb},
+		{"Mb", Mb},
+		{"Gb", Gb},
+		{"Tb", Tb},
+		{"Pb", Pb},
+		{"Eb", Eb},
+	}
+	binaryBytes = []pair{
+		{"kiB", KiB},
+		{"MiB", MiB},
+		{"GiB", GiB},
+		{"TiB", TiB},
+		{"PiB", PiB},
+		{"EiB", EiB},
+	}
+	binaryBits = []pair{
+		{"kib", Kib},
+		{"Mib", Mib},
+		{"Gib", Gib},
+		{"Tib", Tib},
+		{"Pib", Pib},
+	}
+)
+
+// bestUnit returns the most appropriate unit name for the Size within the given
+// unit family.
+//
+// The returned unit is chosen such that the formatted value is less than the
+// next larger unit.
+func (d Size) bestUnit(u FormatUnit) string {
+	var unit string
+	var unitList []pair
+
+	switch u {
+	case FormatBinaryByte:
+		unit = "B"
+		unitList = binaryBytes
+	case FormatMetricByte:
+		unit = "B"
+		unitList = metricBytes
+	case FormatBinaryBit:
+		unit = "b"
+		unitList = binaryBits
+	case FormatMetricBit:
+		unit = "b"
+		unitList = metricBits
+	default:
+		panic("invalid unit kind")
+	}
+
+	for v := range slices.Values(unitList) {
+		if v.value > d {
+			return unit
+		}
+		unit = v.name
+	}
+
+	return unit
+}
