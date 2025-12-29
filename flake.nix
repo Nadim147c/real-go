@@ -2,11 +2,7 @@
   inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      ...
-    }:
+    { nixpkgs, ... }:
     let
       systems = [
         "x86_64-linux"
@@ -23,12 +19,16 @@
         default = pkgs.mkShell {
           name = "real";
           buildInputs = with pkgs; [
-            gnumake
-            go
-            gofumpt
-            golines
-            gopls
-            revive
+            go # we need go of course
+
+            gofumpt # formater
+            golines # line formater
+            gopls # the language server
+            revive # linter
+            gotestsum # test runner
+
+            just # task runner
+            just-lsp # task runner lsp
           ];
         };
 
