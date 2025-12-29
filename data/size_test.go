@@ -1,4 +1,4 @@
-package datasize
+package data
 
 import (
 	"fmt"

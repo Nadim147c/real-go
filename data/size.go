@@ -3,13 +3,14 @@
 //
 // It supports automatic unit selection, custom precision, and integration with
 // the fmt package via custom formatting verbs.
-package datasize
+package data
 
 import (
 	"fmt"
 	"math"
 	"math/big"
-	"slices"
+
+	islices "github.com/Nadim147c/real-go/internal/slices"
 )
 
 // FormatUnit describes a family of units used for formatting data sizes.
@@ -73,7 +74,7 @@ const (
 	Pib Size = PiB / 8
 )
 
-// revive:export exported
+// revive:enable exported
 
 // quotient returns d divided by u as a floating-point value. If u is zero,
 // return NaN.
@@ -84,6 +85,11 @@ func (d Size) quotient(u Size) float64 {
 	abs := d / u
 	mod := d % u
 	return float64(abs) + float64(mod)/float64(u)
+}
+
+// Value returns the underlying int64 value
+func (d Size) Value() int64 {
+	return int64(d)
 }
 
 // UnitTable maps supported unit strings to their corresponding Size values.
@@ -200,6 +206,7 @@ type pair struct {
 
 var (
 	metricBytes = []pair{
+		{"B", Byte},
 		{"kB", KB},
 		{"MB", MB},
 		{"GB", GB},
@@ -208,6 +215,7 @@ var (
 		{"EB", EB},
 	}
 	metricBits = []pair{
+		{"b", 0},
 		{"kb", Kb},
 		{"Mb", Mb},
 		{"Gb", Gb},
@@ -216,6 +224,7 @@ var (
 		{"Eb", Eb},
 	}
 	binaryBytes = []pair{
+		{"B", Byte},
 		{"kiB", KiB},
 		{"MiB", MiB},
 		{"GiB", GiB},
@@ -224,6 +233,7 @@ var (
 		{"EiB", EiB},
 	}
 	binaryBits = []pair{
+		{"b", 0},
 		{"kib", Kib},
 		{"Mib", Mib},
 		{"Gib", Gib},
@@ -238,32 +248,24 @@ var (
 // The returned unit is chosen such that the formatted value is less than the
 // next larger unit.
 func (d Size) bestUnit(u FormatUnit) string {
-	var unit string
 	var unitList []pair
 
 	switch u {
 	case FormatBinaryByte:
-		unit = "B"
 		unitList = binaryBytes
 	case FormatMetricByte:
-		unit = "B"
 		unitList = metricBytes
 	case FormatBinaryBit:
-		unit = "b"
 		unitList = binaryBits
 	case FormatMetricBit:
-		unit = "b"
 		unitList = metricBits
 	default:
 		panic("invalid unit kind")
 	}
 
-	for v := range slices.Values(unitList) {
-		if v.value > d {
-			return unit
-		}
-		unit = v.name
-	}
+	p := islices.LastItemFunc(unitList, func(a pair) bool {
+		return a.value <= d
+	})
 
-	return unit
+	return p.name
 }
