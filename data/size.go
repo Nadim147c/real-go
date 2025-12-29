@@ -111,17 +111,19 @@ var UnitTable = map[string]Size{
 //
 // A precision of zero prints an integer value. For bits and bytes, precision
 // greater than zero appends a fractional part of zeros.
-func (d Size) FormatUnitString(precision int, unit string) string {
+func (d Size) FormatUnitString(unit string, precision ...int) string {
 	if d == 0 {
 		return "0 " + unit
 	}
 
+	prec := islices.OptionalValue(0, precision)
+
 	// Handle bytes.
 	if unit == "B" {
-		if precision == 0 {
+		if prec == 0 {
 			return fmt.Sprintf("%d %s", int64(d), unit)
 		}
-		return fmt.Sprintf("%d.%0*d %s", int64(d), precision, 0, unit)
+		return fmt.Sprintf("%d.%0*d %s", int64(d), prec, 0, unit)
 	}
 
 	// Handle bits.
@@ -129,10 +131,10 @@ func (d Size) FormatUnitString(precision int, unit string) string {
 		bits := big.NewInt(int64(d))
 		bits.Mul(bits, big.NewInt(8))
 
-		if precision == 0 {
+		if prec == 0 {
 			return fmt.Sprintf("%s %s", bits, unit)
 		}
-		return fmt.Sprintf("%s.%0*d %s", bits, precision, 0, unit)
+		return fmt.Sprintf("%s.%0*d %s", bits, prec, 0, unit)
 	}
 
 	u, ok := UnitTable[unit]
@@ -140,7 +142,7 @@ func (d Size) FormatUnitString(precision int, unit string) string {
 		panic("illegal diskspace unit")
 	}
 
-	format := fmt.Sprintf("%%.%df %s", precision, unit)
+	format := fmt.Sprintf("%%.%df %s", prec, unit)
 	return fmt.Sprintf(format, d.quotient(u))
 }
 
@@ -173,16 +175,16 @@ func (d Size) Format(f fmt.State, verb rune) {
 	}
 
 	if fixed {
-		fmt.Fprint(f, d.FormatUnitString(precision, unit))
+		fmt.Fprint(f, d.FormatUnitString(unit, precision))
 		return
 	}
 
 	if unit == "B" || unit == "b" {
-		fmt.Fprint(f, d.FormatUnitString(0, unit))
+		fmt.Fprint(f, d.FormatUnitString(unit))
 		return
 	}
 
-	fmt.Fprint(f, d.FormatUnitString(2, unit))
+	fmt.Fprint(f, d.FormatUnitString(unit, 2))
 }
 
 // String returns the default string representation of the Size.
@@ -193,9 +195,9 @@ func (d Size) String() string {
 	unit := d.bestUnit(FormatBinaryByte)
 	switch unit {
 	case "b", "B":
-		return d.FormatUnitString(0, unit)
+		return d.FormatUnitString(unit)
 	default:
-		return d.FormatUnitString(2, unit)
+		return d.FormatUnitString(unit, 2)
 	}
 }
 

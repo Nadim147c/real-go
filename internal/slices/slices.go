@@ -20,3 +20,10 @@ func LastItemFunc[T any](s []T, f func(T) bool) T {
 
 	return s[idx]
 }
+
+func OptionalValue[T any](d T, s []T) T {
+	if len(s) != 0 {
+		return s[0]
+	}
+	return d
+}

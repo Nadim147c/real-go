@@ -54,7 +54,7 @@ func TestFormatUnitString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.size.FormatUnitString(tt.precision, tt.unit)
+			got := tt.size.FormatUnitString(tt.unit, tt.precision)
 			if got != tt.want {
 				t.Fatalf("got %q, want %q", got, tt.want)
 			}
