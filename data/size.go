@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strconv"
+	"strings"
+	"unicode"
 
 	islices "github.com/Nadim147c/real-go/internal/slices"
 )
@@ -76,6 +79,58 @@ const (
 
 // revive:enable exported
 
+// ParseSize parses a datasize to Size
+func ParseSize(s string) (Size, error) {
+	trimmed := strings.TrimSpace(s)
+	numEnd := strings.LastIndexFunc(trimmed, unicode.IsDigit) + 1
+	if numEnd <= 0 {
+		return 0, fmt.Errorf("invalid size format: %q", s)
+	}
+	num, inputUnit := trimmed[:numEnd], trimmed[numEnd:]
+	size, err := strconv.ParseInt(num, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	unit := strings.TrimSpace(inputUnit)
+	if unit == "" {
+		unit = "B" // default unit is byte
+	}
+
+	// we want convert mib or tib but not weird mIb
+	if all(unit, unicode.IsLower) {
+		unit = strings.Map(func(r rune) rune {
+			if r == 'i' {
+				return r
+			}
+			return unicode.ToUpper(r)
+		}, unit)
+	}
+
+	mul, ok := UnitTable[unit]
+	if !ok {
+		return 0, fmt.Errorf("invalid input unit: %q", inputUnit)
+	}
+
+	if size > 0 && size > math.MaxInt64/int64(mul) {
+		return 0, fmt.Errorf("size overflows int64: %q", s)
+	}
+	if size < 0 && size < math.MinInt64/int64(mul) {
+		return 0, fmt.Errorf("size overflows int64: %q", s)
+	}
+
+	return Size(size) * mul, nil
+}
+
+func all(s string, f func(rune) bool) bool {
+	for _, r := range s {
+		if !f(r) {
+			return false
+		}
+	}
+	return true
+}
+
 // quotient returns d divided by u as a floating-point value. If u is zero,
 // return NaN.
 func (d Size) quotient(u Size) float64 {
@@ -94,6 +149,7 @@ func (d Size) Value() int64 {
 
 // UnitTable maps supported unit strings to their corresponding Size values.
 var UnitTable = map[string]Size{
+	"B":  Byte,
 	"kB": KB, "KB": KB, "MB": MB, "GB": GB, "TB": TB, "PB": PB, "EB": EB,
 	"kiB": KiB, "KiB": KiB, "MiB": MiB, "GiB": GiB, "TiB": TiB, "PiB": PiB, "EiB": EiB,
 	"kb": Kb, "Kb": Kb, "Mb": Mb, "Gb": Gb, "Tb": Tb, "Pb": Pb, "Eb": Eb,

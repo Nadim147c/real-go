@@ -1,7 +1,10 @@
 package data
 
 import (
+	"errors"
 	"fmt"
+	"math"
+	"strings"
 	"time"
 )
 
@@ -9,16 +12,68 @@ import (
 type Speed uint64
 
 // NewSpeed creates a speed from given amount and time.
+// It panics on invalid input.
 func NewSpeed(amount Size, dur time.Duration) Speed {
+	speed, err := NewSpeedE(amount, dur)
+	if err != nil {
+		panic(err)
+	}
+	return speed
+}
+
+// NewSpeedE creates a speed from given amount and time.
+// It returns an error instead of panicking.
+func NewSpeedE(amount Size, dur time.Duration) (Speed, error) {
 	if dur < 0 {
-		panic(fmt.Sprintf("negative time found: %d", dur))
+		return 0, fmt.Errorf("negative duration: %d", dur)
 	}
 
-	// Calculate bytes per second
 	if dur == 0 {
-		return Speed(0)
+		return 0, nil
 	}
-	return Speed(amount*Size(time.Second)) / Speed(dur)
+
+	// If negative speeds are not allowed, guard here.
+	if amount < 0 {
+		return 0, fmt.Errorf("negative amount: %d", amount)
+	}
+
+	// overflow check: amount * time.Second
+	if amount > Size(math.MaxInt64)/Size(time.Second) {
+		return 0, errors.New("speed overflows int64")
+	}
+
+	bytesPerSecond := (amount * Size(time.Second)) / Size(dur)
+	return Speed(bytesPerSecond), nil
+}
+
+var timeTable = map[string]time.Duration{
+	"ns": time.Nanosecond,
+	"µs": time.Nanosecond,
+	"ms": time.Millisecond,
+	"s":  time.Second,
+	"m":  time.Minute,
+	"h":  time.Hour,
+}
+
+// ParseSpeed parses a dataspeed to Speed
+func ParseSpeed(s string) (Speed, error) {
+	trimmed := strings.TrimSpace(s)
+	perIndex := strings.LastIndexAny(trimmed, "p/")
+	if perIndex < 0 {
+		return 0, fmt.Errorf("invalid dataspeed format: %q", s)
+	}
+	sizeStr, durStr := trimmed[:perIndex], trimmed[perIndex+1:]
+
+	dur, ok := timeTable[strings.TrimSpace(durStr)]
+	if !ok {
+		return 0, fmt.Errorf("invalid duration for dataspeed: %q", durStr)
+	}
+
+	size, err := ParseSize(sizeStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid size for dataspeed: %w", err)
+	}
+	return NewSpeedE(size, dur)
 }
 
 // Size returns the speed as a Size (bytes per second)

@@ -5,6 +5,83 @@ import (
 	"testing"
 )
 
+func TestParseSize(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    Size
+		wantErr bool
+	}{
+		// --- basic bytes ---
+		{"bytes", "1B", Byte, false},
+		{"bytes", "1000", 1000, false},
+		{"zero", "0B", Zero, false},
+		{"plain number defaults to bytes", "42", 42 * Byte, false},
+		{"negative", "-1KB", -KB, false},
+
+		// --- metric byte units ---
+		{"kilobyte", "1KB", KB, false},
+		{"megabyte", "2MB", 2 * MB, false},
+		{"gigabyte", "3GB", 3 * GB, false},
+		{"terabyte", "4TB", 4 * TB, false},
+
+		// --- binary byte units ---
+		{"kibibyte", "1KiB", KiB, false},
+		{"mebibyte", "2MiB", 2 * MiB, false},
+		{"gibibyte", "3GiB", 3 * GiB, false},
+
+		// --- metric bit units ---
+		{"kilobit", "8Kb", KB, false}, // 8 kilobits == 1 kilobyte
+		{"megabit", "16Mb", 2 * MB, false},
+
+		// --- binary bit units ---
+		{"kibibit", "8Kib", KiB, false},
+		{"mebibit", "16Mib", 2 * MiB, false},
+
+		// --- whitespace handling ---
+		{"leading space", " 1KB", KB, false},
+		{"trailing space", "1KB ", KB, false},
+		{"inner space", "1 KB", KB, false},
+
+		// --- case insensitivity ---
+		{"lowercase unit", "1kb", KB, false},
+		{"mixed case unit", "1kib", KiB, false},
+		{"mixed case unit", "1 kIb", KiB, true},
+
+		// --- large values ---
+		{"exbibyte", "1EiB", EiB, false},
+		{"petabit", "8Pb", PB, false},
+
+		// --- invalid formats ---
+		{"empty", "", 0, true},
+		{"no number", "KB", 0, true},
+		{"no unit letters", "10_", 0, true},
+		{"unknown unit", "10XB", 0, true},
+		{"float not supported", "1.5GB", 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseSize(tt.input)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil (value=%v)", got)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if got != tt.want {
+				t.Fatalf("ParseSize(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSize_quotient(t *testing.T) {
 	tests := []struct {
 		name string

@@ -82,6 +82,87 @@ func TestNewSpeed(t *testing.T) {
 	}
 }
 
+func TestParseSpeed(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    Speed
+		wantErr bool
+	}{
+		{
+			name:  "bytes per second",
+			input: "100B/s",
+			want:  100,
+		},
+		{
+			name:  "kilobytes per second",
+			input: "1KB/s",
+			want:  Speed(KB),
+		},
+		{
+			name:  "bytes per millisecond",
+			input: "1B/ms",
+			want:  Speed(1000),
+		},
+		{
+			name:  "megabytes per second",
+			input: "2MB/s",
+			want:  Speed(2 * MB),
+		},
+		{
+			name:  "whitespace tolerant",
+			input: " 1 KB / s ",
+			want:  Speed(KB),
+		},
+		{
+			name:    "negative size allowed",
+			input:   "-1KB/s",
+			want:    Speed(0), // wraps; design-dependent
+			wantErr: true,
+		},
+		{
+			name:    "missing separator",
+			input:   "1KBs",
+			wantErr: true,
+		},
+		{
+			name:    "invalid duration",
+			input:   "1KB/day",
+			wantErr: true,
+		},
+		{
+			name:    "invalid size",
+			input:   "XB/s",
+			wantErr: true,
+		},
+		{
+			name:    "empty",
+			input:   "",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseSpeed(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got %v", got)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if got != tt.want {
+				t.Fatalf("ParseSpeed(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSpeed_FormatUnitString(t *testing.T) {
 	tests := []struct {
 		name     string
