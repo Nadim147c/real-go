@@ -3,6 +3,14 @@
 A collection of real-world values as Go types. For when you need actual units, not
 just raw numbers.
 
+## Why?
+
+Because it was fun to write...!
+
+## When to use?
+
+DO NOT USE IT!
+
 ## Quick Examples
 
 ```go
@@ -70,19 +78,11 @@ fmt.Printf("%s = %.1f°F\n", room,
     room.In(temperature.UnitFahrenheit))  // "20.00°C = 68.0°F"
 ```
 
-## Why?
-
-Because it was fun to write...!
-
 ## Install
 
 ```bash
 go get github.com/Nadim147c/real-go
 ```
-
-## When to use?
-
-DO NOT USE IT!
 
 # LICENSE
 
