@@ -1,9 +1,4 @@
-// Package datasize provides utilities for representing, formatting, and
-// printing data sizes in metric and binary units, for both bytes and bits.
-//
-// It supports automatic unit selection, custom precision, and integration with
-// the fmt package via custom formatting verbs.
-package data
+package real
 
 import (
 	"fmt"
@@ -16,71 +11,71 @@ import (
 	islices "github.com/Nadim147c/real-go/internal/slices"
 )
 
-// FormatUnit describes a family of units used for formatting data sizes.
-type FormatUnit int
+// DataFormatUnit describes a family of units used for formatting data sizes.
+type DataFormatUnit int
 
 const (
-	// FormatBinaryByte represents binary byte units (KiB, MiB, GiB, ...).
-	FormatBinaryByte FormatUnit = iota
-	// FormatMetricByte represents metric byte units (kB, MB, GB, ...).
-	FormatMetricByte
-	// FormatBinaryBit represents binary bit units (Kib, Mib, Gib, ...).
-	FormatBinaryBit
-	// FormatMetricBit represents metric bit units (Kb, Mb, Gb, ...).
-	FormatMetricBit
+	// DataFormatBinaryByte represents binary byte units (KiB, MiB, GiB, ...).
+	DataFormatBinaryByte DataFormatUnit = iota
+	// DataFormatMetricByte represents metric byte units (kB, MB, GB, ...).
+	DataFormatMetricByte
+	// DataFormatBinaryBit represents binary bit units (Kib, Mib, Gib, ...).
+	DataFormatBinaryBit
+	// DataFormatMetricBit represents metric bit units (Kb, Mb, Gb, ...).
+	DataFormatMetricBit
 )
 
-// Size represents a quantity of data in bytes.
+// DataSize represents a quantity of data in bytes.
 //
 // It is defined as an int64 and can represent both byte- and bit-based
 // quantities through conversion.
-type Size int64
+type DataSize int64
 
 // revive:disable exported
 
 const (
 	// Zero represents a data size of zero bytes.
-	Zero Size = 0
+	Zero DataSize = 0
 
 	// Byte represents a single byte.
-	Byte Size = 1
+	Byte DataSize = 1
 
 	// Metric byte units.
-	KB Size = 1000 * Byte
-	MB Size = 1000 * KB
-	GB Size = 1000 * MB
-	TB Size = 1000 * GB
-	PB Size = 1000 * TB
-	EB Size = 1000 * PB
+	KB DataSize = 1000 * Byte
+	MB DataSize = 1000 * KB
+	GB DataSize = 1000 * MB
+	TB DataSize = 1000 * GB
+	PB DataSize = 1000 * TB
+	EB DataSize = 1000 * PB
 
 	// Binary byte units.
-	KiB Size = 1024 * Byte
-	MiB Size = 1024 * KiB
-	GiB Size = 1024 * MiB
-	TiB Size = 1024 * GiB
-	PiB Size = 1024 * TiB
-	EiB Size = 1024 * PiB
+	KiB DataSize = 1024 * Byte
+	MiB DataSize = 1024 * KiB
+	GiB DataSize = 1024 * MiB
+	TiB DataSize = 1024 * GiB
+	PiB DataSize = 1024 * TiB
+	EiB DataSize = 1024 * PiB
 
 	// Metric bit units.
-	Kb Size = KB / 8
-	Mb Size = MB / 8
-	Gb Size = GB / 8
-	Tb Size = TB / 8
-	Pb Size = PB / 8
-	Eb Size = EB / 8
+	Kb DataSize = KB / 8
+	Mb DataSize = MB / 8
+	Gb DataSize = GB / 8
+	Tb DataSize = TB / 8
+	Pb DataSize = PB / 8
+	Eb DataSize = EB / 8
 
 	// Binary bit units.
-	Kib Size = KiB / 8
-	Mib Size = MiB / 8
-	Gib Size = GiB / 8
-	Tib Size = TiB / 8
-	Pib Size = PiB / 8
+	Kib DataSize = KiB / 8
+	Mib DataSize = MiB / 8
+	Gib DataSize = GiB / 8
+	Tib DataSize = TiB / 8
+	Pib DataSize = PiB / 8
 )
 
 // revive:enable exported
 
 // ParseSize parses a datasize to Size
-func ParseSize(s string) (Size, error) {
+func ParseSize(s string) (DataSize, error) {
 	trimmed := strings.TrimSpace(s)
 	numEnd := strings.LastIndexFunc(trimmed, unicode.IsDigit) + 1
 	if numEnd <= 0 {
@@ -119,7 +114,7 @@ func ParseSize(s string) (Size, error) {
 		return 0, fmt.Errorf("size overflows int64: %q", s)
 	}
 
-	return Size(size) * mul, nil
+	return DataSize(size) * mul, nil
 }
 
 func all(s string, f func(rune) bool) bool {
@@ -133,7 +128,7 @@ func all(s string, f func(rune) bool) bool {
 
 // quotient returns d divided by u as a floating-point value. If u is zero,
 // return NaN.
-func (d Size) quotient(u Size) float64 {
+func (d DataSize) quotient(u DataSize) float64 {
 	if u == 0 {
 		return math.NaN()
 	}
@@ -143,12 +138,12 @@ func (d Size) quotient(u Size) float64 {
 }
 
 // Value returns the underlying int64 value
-func (d Size) Value() int64 {
+func (d DataSize) Value() int64 {
 	return int64(d)
 }
 
 // UnitTable maps supported unit strings to their corresponding Size values.
-var UnitTable = map[string]Size{
+var UnitTable = map[string]DataSize{
 	"B":  Byte,
 	"kB": KB, "KB": KB, "MB": MB, "GB": GB, "TB": TB, "PB": PB, "EB": EB,
 	"kiB": KiB, "KiB": KiB, "MiB": MiB, "GiB": GiB, "TiB": TiB, "PiB": PiB, "EiB": EiB,
@@ -167,7 +162,7 @@ var UnitTable = map[string]Size{
 //
 // A precision of zero prints an integer value. For bits and bytes, precision
 // greater than zero appends a fractional part of zeros.
-func (d Size) FormatUnitString(unit string, precision ...int) string {
+func (d DataSize) FormatUnitString(unit string, precision ...int) string {
 	if d == 0 {
 		return "0 " + unit
 	}
@@ -209,19 +204,19 @@ func (d Size) FormatUnitString(unit string, precision ...int) string {
 //   - %m for metric bit units (Kb, Mb, ...)
 //   - %d for the raw int64 value
 //   - %s for a string representation similar to %B but ignoring precision
-func (d Size) Format(f fmt.State, verb rune) {
+func (d DataSize) Format(f fmt.State, verb rune) {
 	precision, fixed := f.Precision()
 	var unit string
 
 	switch verb {
 	case 'B':
-		unit = d.bestUnit(FormatBinaryByte)
+		unit = d.bestUnit(DataFormatBinaryByte)
 	case 'b':
-		unit = d.bestUnit(FormatBinaryBit)
+		unit = d.bestUnit(DataFormatBinaryBit)
 	case 'M':
-		unit = d.bestUnit(FormatMetricByte)
+		unit = d.bestUnit(DataFormatMetricByte)
 	case 'm':
-		unit = d.bestUnit(FormatMetricBit)
+		unit = d.bestUnit(DataFormatMetricBit)
 	case 'd':
 		fmt.Fprint(f, int64(d))
 		return
@@ -247,8 +242,8 @@ func (d Size) Format(f fmt.State, verb rune) {
 //
 // It uses binary byte units and prints with two decimal places, except for raw
 // bytes, which are printed as integers.
-func (d Size) String() string {
-	unit := d.bestUnit(FormatBinaryByte)
+func (d DataSize) String() string {
+	unit := d.bestUnit(DataFormatBinaryByte)
 	switch unit {
 	case "b", "B":
 		return d.FormatUnitString(unit)
@@ -259,7 +254,7 @@ func (d Size) String() string {
 
 type pair struct {
 	name  string
-	value Size
+	value DataSize
 }
 
 var (
@@ -305,17 +300,17 @@ var (
 //
 // The returned unit is chosen such that the formatted value is less than the
 // next larger unit.
-func (d Size) bestUnit(u FormatUnit) string {
+func (d DataSize) bestUnit(u DataFormatUnit) string {
 	var unitList []pair
 
 	switch u {
-	case FormatBinaryByte:
+	case DataFormatBinaryByte:
 		unitList = binaryBytes
-	case FormatMetricByte:
+	case DataFormatMetricByte:
 		unitList = metricBytes
-	case FormatBinaryBit:
+	case DataFormatBinaryBit:
 		unitList = binaryBits
-	case FormatMetricBit:
+	case DataFormatMetricBit:
 		unitList = metricBits
 	default:
 		panic("invalid unit kind")

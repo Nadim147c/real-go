@@ -1,4 +1,4 @@
-package data
+package real
 
 import (
 	"fmt"
@@ -9,50 +9,50 @@ func TestParseSize(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    Size
+		want    DataSize
 		wantErr bool
 	}{
-		// --- basic bytes ---
+		// basic bytes
 		{"bytes", "1B", Byte, false},
 		{"bytes", "1000", 1000, false},
 		{"zero", "0B", Zero, false},
 		{"plain number defaults to bytes", "42", 42 * Byte, false},
 		{"negative", "-1KB", -KB, false},
 
-		// --- metric byte units ---
+		// metric byte units
 		{"kilobyte", "1KB", KB, false},
 		{"megabyte", "2MB", 2 * MB, false},
 		{"gigabyte", "3GB", 3 * GB, false},
 		{"terabyte", "4TB", 4 * TB, false},
 
-		// --- binary byte units ---
+		// binary byte units
 		{"kibibyte", "1KiB", KiB, false},
 		{"mebibyte", "2MiB", 2 * MiB, false},
 		{"gibibyte", "3GiB", 3 * GiB, false},
 
-		// --- metric bit units ---
+		// metric bit units
 		{"kilobit", "8Kb", KB, false}, // 8 kilobits == 1 kilobyte
 		{"megabit", "16Mb", 2 * MB, false},
 
-		// --- binary bit units ---
+		// binary bit units
 		{"kibibit", "8Kib", KiB, false},
 		{"mebibit", "16Mib", 2 * MiB, false},
 
-		// --- whitespace handling ---
+		// whitespace handling
 		{"leading space", " 1KB", KB, false},
 		{"trailing space", "1KB ", KB, false},
 		{"inner space", "1 KB", KB, false},
 
-		// --- case insensitivity ---
+		// case insensitivity
 		{"lowercase unit", "1kb", KB, false},
 		{"mixed case unit", "1kib", KiB, false},
 		{"mixed case unit", "1 kIb", KiB, true},
 
-		// --- large values ---
+		// large values
 		{"exbibyte", "1EiB", EiB, false},
 		{"petabit", "8Pb", PB, false},
 
-		// --- invalid formats ---
+		// invalid formats
 		{"empty", "", 0, true},
 		{"no number", "KB", 0, true},
 		{"no unit letters", "10_", 0, true},
@@ -85,8 +85,8 @@ func TestParseSize(t *testing.T) {
 func TestSize_quotient(t *testing.T) {
 	tests := []struct {
 		name string
-		d    Size
-		u    Size
+		d    DataSize
+		u    DataSize
 		want float64
 	}{
 		{"exact division", 1024, 1024, 1.0},
@@ -111,10 +111,10 @@ func TestSize_quotient(t *testing.T) {
 	}
 }
 
-func TestFormatUnitString(t *testing.T) {
+func TestDataSize_FormatUnitString(t *testing.T) {
 	tests := []struct {
 		name      string
-		size      Size
+		size      DataSize
 		precision int
 		unit      string
 		want      string
@@ -139,19 +139,19 @@ func TestFormatUnitString(t *testing.T) {
 	}
 }
 
-func TestBestUnit(t *testing.T) {
+func TestDataSize_bestUnit(t *testing.T) {
 	tests := []struct {
 		name string
-		size Size
-		unit FormatUnit
+		size DataSize
+		unit DataFormatUnit
 		want string
 	}{
-		{"bytes stay bytes", 512, FormatBinaryByte, "B"},
-		{"binary KiB", 1024, FormatBinaryByte, "kiB"},
-		{"binary MiB", 5 * MiB, FormatBinaryByte, "MiB"},
-		{"metric KB", 1000, FormatMetricByte, "kB"},
-		{"metric bits", 1000, FormatMetricBit, "kb"},
-		{"binary bits", 1024, FormatBinaryBit, "kib"},
+		{"bytes stay bytes", 512, DataFormatBinaryByte, "B"},
+		{"binary KiB", 1024, DataFormatBinaryByte, "kiB"},
+		{"binary MiB", 5 * MiB, DataFormatBinaryByte, "MiB"},
+		{"metric KB", 1000, DataFormatMetricByte, "kB"},
+		{"metric bits", 1000, DataFormatMetricBit, "kb"},
+		{"binary bits", 1024, DataFormatBinaryBit, "kib"},
 	}
 
 	for _, tt := range tests {
@@ -164,10 +164,10 @@ func TestBestUnit(t *testing.T) {
 	}
 }
 
-func TestString(t *testing.T) {
+func TestDataSize_String(t *testing.T) {
 	tests := []struct {
 		name string
-		size Size
+		size DataSize
 		want string
 	}{
 		{"zero", 0, "0 B"},
@@ -190,7 +190,7 @@ func TestFmtFormatting(t *testing.T) {
 	tests := []struct {
 		name string
 		fmt  string
-		size Size
+		size DataSize
 		want string
 	}{
 		{"binary byte verb", "%B", 1536, "1.50 kiB"},

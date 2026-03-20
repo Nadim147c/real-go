@@ -1,4 +1,4 @@
-package data
+package real
 
 import (
 	"errors"
@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-// Speed represents a quantity of data transfer in bytes per second.
-type Speed uint64
+// DataSpeed represents a quantity of data transfer in bytes per second.
+type DataSpeed uint64
 
 // NewSpeed creates a speed from given amount and time.
 // It panics on invalid input.
-func NewSpeed(amount Size, dur time.Duration) Speed {
+func NewSpeed(amount DataSize, dur time.Duration) DataSpeed {
 	speed, err := NewSpeedE(amount, dur)
 	if err != nil {
 		panic(err)
@@ -23,7 +23,7 @@ func NewSpeed(amount Size, dur time.Duration) Speed {
 
 // NewSpeedE creates a speed from given amount and time.
 // It returns an error instead of panicking.
-func NewSpeedE(amount Size, dur time.Duration) (Speed, error) {
+func NewSpeedE(amount DataSize, dur time.Duration) (DataSpeed, error) {
 	if dur < 0 {
 		return 0, fmt.Errorf("negative duration: %d", dur)
 	}
@@ -38,12 +38,12 @@ func NewSpeedE(amount Size, dur time.Duration) (Speed, error) {
 	}
 
 	// overflow check: amount * time.Second
-	if amount > Size(math.MaxInt64)/Size(time.Second) {
+	if amount > DataSize(math.MaxInt64)/DataSize(time.Second) {
 		return 0, errors.New("speed overflows int64")
 	}
 
-	bytesPerSecond := (amount * Size(time.Second)) / Size(dur)
-	return Speed(bytesPerSecond), nil
+	bytesPerSecond := (amount * DataSize(time.Second)) / DataSize(dur)
+	return DataSpeed(bytesPerSecond), nil
 }
 
 var timeTable = map[string]time.Duration{
@@ -56,7 +56,7 @@ var timeTable = map[string]time.Duration{
 }
 
 // ParseSpeed parses a dataspeed to Speed
-func ParseSpeed(s string) (Speed, error) {
+func ParseSpeed(s string) (DataSpeed, error) {
 	trimmed := strings.TrimSpace(s)
 	perIndex := strings.LastIndexAny(trimmed, "p/")
 	if perIndex < 0 {
@@ -77,15 +77,15 @@ func ParseSpeed(s string) (Speed, error) {
 }
 
 // Size returns the speed as a Size (bytes per second)
-func (s Speed) Size() Size {
-	return Size(s)
+func (s DataSpeed) Size() DataSize {
+	return DataSize(s)
 }
 
 // FormatUnitString formats the Speed using the specified unit and precision.
 //
 // Supported units include all units supported by Size.FormatUnitString,
 // with "/s" appended for per-second notation.
-func (s Speed) FormatUnitString(unit string, precision ...int) string {
+func (s DataSpeed) FormatUnitString(unit string, precision ...int) string {
 	if s == 0 {
 		return "0 " + unit + "/s"
 	}
@@ -107,7 +107,7 @@ func (s Speed) FormatUnitString(unit string, precision ...int) string {
 //   - %m for metric bit units per second (Kb/s, Mb/s, ...)
 //   - %d for the raw uint64 value
 //   - %s for a string representation similar to %B but ignoring precision
-func (s Speed) Format(f fmt.State, verb rune) {
+func (s DataSpeed) Format(f fmt.State, verb rune) {
 	s.Size().Format(f, verb)
 	fmt.Fprint(f, "/s")
 }
@@ -116,17 +116,17 @@ func (s Speed) Format(f fmt.State, verb rune) {
 //
 // It uses binary byte units per second and prints with two decimal places,
 // except for raw bytes per second, which are printed as integers.
-func (s Speed) String() string {
+func (s DataSpeed) String() string {
 	return s.Size().String() + "/s"
 }
 
 // BytesPerSecond returns the speed in bytes per second as a uint64
-func (s Speed) BytesPerSecond() uint64 {
+func (s DataSpeed) BytesPerSecond() uint64 {
 	return uint64(s)
 }
 
 // KilobitsPerSecond returns the speed in kilobits per second (metric)
-func (s Speed) KilobitsPerSecond() float64 {
+func (s DataSpeed) KilobitsPerSecond() float64 {
 	if s == 0 {
 		return 0
 	}
@@ -135,7 +135,7 @@ func (s Speed) KilobitsPerSecond() float64 {
 }
 
 // MegabitsPerSecond returns the speed in megabits per second (metric)
-func (s Speed) MegabitsPerSecond() float64 {
+func (s DataSpeed) MegabitsPerSecond() float64 {
 	if s == 0 {
 		return 0
 	}
@@ -144,7 +144,7 @@ func (s Speed) MegabitsPerSecond() float64 {
 }
 
 // KilobytesPerSecond returns the speed in kilobytes per second (metric)
-func (s Speed) KilobytesPerSecond() float64 {
+func (s DataSpeed) KilobytesPerSecond() float64 {
 	if s == 0 {
 		return 0
 	}
@@ -153,7 +153,7 @@ func (s Speed) KilobytesPerSecond() float64 {
 }
 
 // MegabytesPerSecond returns the speed in megabytes per second (metric)
-func (s Speed) MegabytesPerSecond() float64 {
+func (s DataSpeed) MegabytesPerSecond() float64 {
 	if s == 0 {
 		return 0
 	}
@@ -162,7 +162,7 @@ func (s Speed) MegabytesPerSecond() float64 {
 }
 
 // KibibitsPerSecond returns the speed in kibibits per second (binary)
-func (s Speed) KibibitsPerSecond() float64 {
+func (s DataSpeed) KibibitsPerSecond() float64 {
 	if s == 0 {
 		return 0
 	}
@@ -171,7 +171,7 @@ func (s Speed) KibibitsPerSecond() float64 {
 }
 
 // MebibitsPerSecond returns the speed in mebibits per second (binary)
-func (s Speed) MebibitsPerSecond() float64 {
+func (s DataSpeed) MebibitsPerSecond() float64 {
 	if s == 0 {
 		return 0
 	}
@@ -180,7 +180,7 @@ func (s Speed) MebibitsPerSecond() float64 {
 }
 
 // KibibytesPerSecond returns the speed in kibibytes per second (binary)
-func (s Speed) KibibytesPerSecond() float64 {
+func (s DataSpeed) KibibytesPerSecond() float64 {
 	if s == 0 {
 		return 0
 	}
@@ -189,7 +189,7 @@ func (s Speed) KibibytesPerSecond() float64 {
 }
 
 // MebibytesPerSecond returns the speed in mebibytes per second (binary)
-func (s Speed) MebibytesPerSecond() float64 {
+func (s DataSpeed) MebibytesPerSecond() float64 {
 	if s == 0 {
 		return 0
 	}

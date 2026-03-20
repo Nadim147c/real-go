@@ -1,4 +1,4 @@
-package data
+package real
 
 import (
 	"testing"
@@ -8,34 +8,34 @@ import (
 func TestNewSpeed(t *testing.T) {
 	tests := []struct {
 		name     string
-		amount   Size
+		amount   DataSize
 		dur      time.Duration
-		expected Speed
+		expected DataSpeed
 		panic    bool
 	}{
 		{
 			name:     "1 MB in 1 second",
 			amount:   MB,
 			dur:      time.Second,
-			expected: Speed(MB), // 1 MB/s
+			expected: DataSpeed(MB), // 1 MB/s
 		},
 		{
 			name:     "100 MB in 2 seconds",
 			amount:   100 * MB,
 			dur:      2 * time.Second,
-			expected: Speed(50 * MB), // 50 MB/s
+			expected: DataSpeed(50 * MB), // 50 MB/s
 		},
 		{
 			name:     "1 MiB in 1 second",
 			amount:   MiB,
 			dur:      time.Second,
-			expected: Speed(MiB), // 1 MiB/s
+			expected: DataSpeed(MiB), // 1 MiB/s
 		},
 		{
 			name:     "1 byte in 1 second",
 			amount:   Byte,
 			dur:      time.Second,
-			expected: Speed(Byte), // 1 B/s
+			expected: DataSpeed(Byte), // 1 B/s
 		},
 		{
 			name:     "0 bytes in 1 second",
@@ -53,7 +53,7 @@ func TestNewSpeed(t *testing.T) {
 			name:     "500 MB in 500ms",
 			amount:   500 * MB,
 			dur:      500 * time.Millisecond,
-			expected: Speed(1000 * MB), // 1000 MB/s
+			expected: DataSpeed(1000 * MB), // 1000 MB/s
 		},
 		{
 			name:   "negative duration - should panic",
@@ -86,7 +86,7 @@ func TestParseSpeed(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    Speed
+		want    DataSpeed
 		wantErr bool
 	}{
 		{
@@ -97,27 +97,27 @@ func TestParseSpeed(t *testing.T) {
 		{
 			name:  "kilobytes per second",
 			input: "1KB/s",
-			want:  Speed(KB),
+			want:  DataSpeed(KB),
 		},
 		{
 			name:  "bytes per millisecond",
 			input: "1B/ms",
-			want:  Speed(1000),
+			want:  DataSpeed(1000),
 		},
 		{
 			name:  "megabytes per second",
 			input: "2MB/s",
-			want:  Speed(2 * MB),
+			want:  DataSpeed(2 * MB),
 		},
 		{
 			name:  "whitespace tolerant",
 			input: " 1 KB / s ",
-			want:  Speed(KB),
+			want:  DataSpeed(KB),
 		},
 		{
 			name:    "negative size allowed",
 			input:   "-1KB/s",
-			want:    Speed(0), // wraps; design-dependent
+			want:    DataSpeed(0), // wraps; design-dependent
 			wantErr: true,
 		},
 		{
@@ -166,7 +166,7 @@ func TestParseSpeed(t *testing.T) {
 func TestSpeed_FormatUnitString(t *testing.T) {
 	tests := []struct {
 		name     string
-		speed    Speed
+		speed    DataSpeed
 		unit     string
 		prec     []int
 		expected string
@@ -180,33 +180,33 @@ func TestSpeed_FormatUnitString(t *testing.T) {
 		},
 		{
 			name:     "1024 B/s",
-			speed:    Speed(1024),
+			speed:    DataSpeed(1024),
 			unit:     "B",
 			expected: "1024 B/s",
 		},
 		{
 			name:     "1024 B/s with 2 decimal",
-			speed:    Speed(1024),
+			speed:    DataSpeed(1024),
 			unit:     "B",
 			prec:     []int{2},
 			expected: "1024.00 B/s",
 		},
 		{
 			name:     "1024 KiB/s",
-			speed:    Speed(KiB),
+			speed:    DataSpeed(KiB),
 			unit:     "kiB",
 			expected: "1 kiB/s",
 		},
 		{
 			name:     "1.5 MiB/s",
-			speed:    Speed(MiB) + Speed(512*KiB), // 1.5 MiB/s
+			speed:    DataSpeed(MiB) + DataSpeed(512*KiB), // 1.5 MiB/s
 			unit:     "MiB",
 			prec:     []int{2},
 			expected: "1.50 MiB/s",
 		},
 		{
 			name:     "2.5 GB/s",
-			speed:    Speed(2*GB) + Speed(500*MB),
+			speed:    DataSpeed(2*GB) + DataSpeed(500*MB),
 			unit:     "GB",
 			prec:     []int{1},
 			expected: "2.5 GB/s",
@@ -215,27 +215,27 @@ func TestSpeed_FormatUnitString(t *testing.T) {
 		// Bit units
 		{
 			name:     "8 b/s",
-			speed:    Speed(1), // 1 byte/s = 8 bits/s
+			speed:    DataSpeed(1), // 1 byte/s = 8 bits/s
 			unit:     "b",
 			expected: "8 b/s",
 		},
 		{
 			name:     "8192 b/s",
-			speed:    Speed(1024), // 1024 bytes/s = 8192 bits/s
+			speed:    DataSpeed(1024), // 1024 bytes/s = 8192 bits/s
 			unit:     "b",
 			prec:     []int{2},
 			expected: "8192.00 b/s",
 		},
 		{
 			name:     "1 Mb/s",
-			speed:    Speed(MB) / 8, // 1 MB/s = 8 Mb/s
+			speed:    DataSpeed(MB) / 8, // 1 MB/s = 8 Mb/s
 			unit:     "Mb",
 			prec:     []int{2},
 			expected: "1.00 Mb/s",
 		},
 		{
 			name:     "1 Mib/s",
-			speed:    Speed(MiB),
+			speed:    DataSpeed(MiB),
 			unit:     "Mib",
 			prec:     []int{2},
 			expected: "8.00 Mib/s",
@@ -244,13 +244,13 @@ func TestSpeed_FormatUnitString(t *testing.T) {
 		// Metric units
 		{
 			name:     "1000 kB/s",
-			speed:    Speed(MB),
+			speed:    DataSpeed(MB),
 			unit:     "kB",
 			expected: "1000 kB/s",
 		},
 		{
 			name:     "1 MB/s",
-			speed:    Speed(MB),
+			speed:    DataSpeed(MB),
 			unit:     "MB",
 			expected: "1 MB/s",
 		},
@@ -258,13 +258,13 @@ func TestSpeed_FormatUnitString(t *testing.T) {
 		// Binary units
 		{
 			name:     "1024 kiB/s",
-			speed:    Speed(MiB),
+			speed:    DataSpeed(MiB),
 			unit:     "kiB",
 			expected: "1024 kiB/s",
 		},
 		{
 			name:     "1 GiB/s",
-			speed:    Speed(GiB),
+			speed:    DataSpeed(GiB),
 			unit:     "GiB",
 			prec:     []int{3},
 			expected: "1.000 GiB/s",
@@ -285,7 +285,7 @@ func TestSpeed_FormatUnitString(t *testing.T) {
 func TestSpeed_String(t *testing.T) {
 	tests := []struct {
 		name     string
-		speed    Speed
+		speed    DataSpeed
 		expected string
 	}{
 		{
@@ -295,37 +295,37 @@ func TestSpeed_String(t *testing.T) {
 		},
 		{
 			name:     "bytes per second",
-			speed:    Speed(999),
+			speed:    DataSpeed(999),
 			expected: "999 B/s",
 		},
 		{
 			name:     "just under 1 KiB/s",
-			speed:    Speed(1023),
+			speed:    DataSpeed(1023),
 			expected: "1023 B/s",
 		},
 		{
 			name:     "exactly 1 KiB/s",
-			speed:    Speed(KiB),
+			speed:    DataSpeed(KiB),
 			expected: "1.00 kiB/s",
 		},
 		{
 			name:     "1.5 MiB/s",
-			speed:    Speed(MiB) + Speed(512*KiB),
+			speed:    DataSpeed(MiB) + DataSpeed(512*KiB),
 			expected: "1.50 MiB/s",
 		},
 		{
 			name:     "1024 MiB/s",
-			speed:    Speed(GiB),
+			speed:    DataSpeed(GiB),
 			expected: "1.00 GiB/s",
 		},
 		{
 			name:     "1 GiB/s",
-			speed:    Speed(GiB) + Speed(1),
+			speed:    DataSpeed(GiB) + DataSpeed(1),
 			expected: "1.00 GiB/s",
 		},
 		{
 			name:     "2.5 GiB/s",
-			speed:    Speed(2*GiB) + Speed(512*MiB),
+			speed:    DataSpeed(2*GiB) + DataSpeed(512*MiB),
 			expected: "2.50 GiB/s",
 		},
 	}

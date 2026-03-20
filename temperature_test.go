@@ -1,4 +1,4 @@
-package temperature
+package real
 
 import (
 	"fmt"
@@ -13,9 +13,9 @@ func TestConstructors(t *testing.T) {
 		want Temperature
 	}{
 		{"kelvin", Kelvin(300), 300},
-		{"celsius", Celsius(0), Freezing},
-		{"fahrenheit", Fahrenheit(32), Freezing},
-		{"fahrenheit boiling", Fahrenheit(212), Boiling},
+		{"celsius", Celsius(0), TempFreezing},
+		{"fahrenheit", Fahrenheit(32), TempFreezing},
+		{"fahrenheit boiling", Fahrenheit(212), TempBoiling},
 	}
 
 	for _, tt := range tests {
@@ -31,14 +31,14 @@ func TestIn(t *testing.T) {
 	tests := []struct {
 		name string
 		t    Temperature
-		unit Unit
+		unit TempUnit
 		want float64
 	}{
-		{"kelvin to kelvin", Freezing, UnitKelvin, 273.15},
-		{"kelvin to celsius", Freezing, UnitCelsius, 0},
-		{"kelvin to fahrenheit", Freezing, UnitFahrenheit, 32},
-		{"boiling to celsius", Boiling, UnitCelsius, 100},
-		{"boiling to fahrenheit", Boiling, UnitFahrenheit, 212},
+		{"kelvin to kelvin", TempFreezing, TempUnitKelvin, 273.15},
+		{"kelvin to celsius", TempFreezing, TempUnitCelsius, 0},
+		{"kelvin to fahrenheit", TempFreezing, TempUnitFahrenheit, 32},
+		{"boiling to celsius", TempBoiling, TempUnitCelsius, 100},
+		{"boiling to fahrenheit", TempBoiling, TempUnitFahrenheit, 212},
 	}
 
 	for _, tt := range tests {
@@ -51,15 +51,15 @@ func TestIn(t *testing.T) {
 	}
 }
 
-func TestString(t *testing.T) {
+func TestTemperature_String(t *testing.T) {
 	tests := []struct {
 		name string
 		t    Temperature
 		want string
 	}{
 		{"zero", 0, "-273.15 °C"},
-		{"freezing", Freezing, "0.00 °C"},
-		{"boiling", Boiling, "100.00 °C"},
+		{"freezing", TempFreezing, "0.00 °C"},
+		{"boiling", TempBoiling, "100.00 °C"},
 	}
 
 	for _, tt := range tests {
@@ -87,11 +87,11 @@ func TestFormat(t *testing.T) {
 		t    Temperature
 		want string
 	}{
-		{"kelvin", "%K", Freezing, "273.15 K"},
-		{"celsius", "%C", Freezing, "0.00 °C"},
-		{"fahrenheit", "%F", Freezing, "32.00 °F"},
-		{"alias f", "%f", Freezing, "0.00 °C"},
-		{"precision override", "%.1C", Freezing, "0.0 °C"},
+		{"kelvin", "%K", TempFreezing, "273.15 K"},
+		{"celsius", "%C", TempFreezing, "0.00 °C"},
+		{"fahrenheit", "%F", TempFreezing, "32.00 °F"},
+		{"alias f", "%f", TempFreezing, "0.00 °C"},
+		{"precision override", "%.1C", TempFreezing, "0.0 °C"},
 	}
 
 	for _, tt := range tests {
@@ -111,5 +111,5 @@ func TestInInvalidUnitPanics(t *testing.T) {
 		}
 	}()
 
-	_ = Freezing.In(Unit(999))
+	_ = TempFreezing.In(TempUnit(999))
 }
